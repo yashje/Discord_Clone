@@ -1,4 +1,4 @@
-# Dappcord
+# Discord_Clone
 
 ## Technology Stack & Tools
 
