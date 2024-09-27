@@ -1,29 +1,46 @@
-const Channels = ({ provider, account, dappcord, channels, currentChannel, setCurrentChannel }) => {
-  const channelHandler = async (channel) => {
-    // Check if user has joined
-    // If they haven't allow them to mint.
-    const hasJoined = await dappcord.hasJoined(channel.id, account)
+import { ethers } from 'ethers';
 
-    if (hasJoined) {
-      setCurrentChannel(channel)
-    } else {
-      const signer = await provider.getSigner()
-      const transaction = await dappcord.connect(signer).mint(channel.id, { value: channel.cost })
-      await transaction.wait()
-      setCurrentChannel(channel)
+const Channels = ({ provider, setAccount, account, discord, channels, currentChannel, setCurrentChannel }) => {
+  const channelHandler = async (channel) => {
+    try {
+      if (account) {
+        // Check if the user has joined the channel
+        const hasJoined = await discord.hasJoined(channel.id.toString(), account);
+
+        if (hasJoined) {
+          setCurrentChannel(channel.id);  // Set by ID, not converting to string
+        } else {
+          const signer = provider.getSigner();
+          const transaction = await discord.connect(signer).mint(channel.id, { value: channel.cost });
+          await transaction.wait();
+          setCurrentChannel(channel.id);
+        }
+      } else {
+        // Request account from MetaMask
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        // Validate the first account returned
+        const validAccount = ethers.utils.getAddress(accounts[0]);
+
+        // Set account in state
+        setAccount(validAccount);
+      }
+    } catch (error) {
+      console.error("Error in channelHandler:", error);
     }
-  }
+  };
 
   return (
     <div className="channels">
       <div className="channels__text">
         <h2>Text Channels</h2>
-
         <ul>
           {channels.map((channel, index) => (
             <li
-              onClick={() => channelHandler(channel)} key={index}
-              className={currentChannel && currentChannel.id.toString() === channel.id.toString() ? "active" : ""}>
+              onClick={() => channelHandler(channel)}
+              key={index}
+              className={currentChannel === channel.id ? "active" : ""}
+            >
               {channel.name}
             </li>
           ))}
@@ -32,7 +49,6 @@ const Channels = ({ provider, account, dappcord, channels, currentChannel, setCu
 
       <div className="channels__voice">
         <h2>Voice Channels</h2>
-
         <ul>
           <li>Channel 1</li>
           <li>Channel 2</li>
@@ -41,6 +57,6 @@ const Channels = ({ provider, account, dappcord, channels, currentChannel, setCu
       </div>
     </div>
   );
-}
+};
 
 export default Channels;
